@@ -39,7 +39,7 @@ def _normalize(value):
 
 
 def verify(appt: Appointment, fees: dict[str, FeeItem],
-           use_llm: bool | None = None) -> VerificationResult:
+           use_model: bool | None = None) -> VerificationResult:
     fields: dict[str, FieldValue] = check_eligibility(appt.member_id)
     sources, reasons = ["clearinghouse"], []
     need = required_fields(appt, fees)
@@ -51,7 +51,7 @@ def verify(appt: Appointment, fees: dict[str, FeeItem],
         if missing:
             text = fetch_portal_page(appt.member_id)
             sources.append("portal")
-            parsed = parse_portal_text(text, use_llm) if text else {}
+            parsed = parse_portal_text(text, use_model) if text else {}
             for key, fv in parsed.items():
                 if key not in fields:
                     fields[key] = fv
@@ -74,6 +74,6 @@ def verify(appt: Appointment, fees: dict[str, FeeItem],
     )
 
 
-def run_all(use_llm: bool | None = None) -> list[VerificationResult]:
+def run_all(use_model: bool | None = None) -> list[VerificationResult]:
     fees = load_fees()
-    return [verify(appt, fees, use_llm) for appt in load_appointments()]
+    return [verify(appt, fees, use_model) for appt in load_appointments()]

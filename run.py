@@ -7,7 +7,7 @@ import csv
 from pathlib import Path
 
 from agent.eob_check import compare, load_eobs, pct, to_markdown
-from agent.parser import MODEL, llm_enabled
+from agent.parser import MODEL, model_enabled
 from agent.pipeline import run_all
 
 OUT = Path(__file__).resolve().parent / "outputs"
@@ -18,7 +18,7 @@ def money(x: float) -> str:
 
 
 def main() -> None:
-    mode = f"Claude ({MODEL})" if llm_enabled() else "regex fallback (ANTHROPIC_API_KEY not set)"
+    mode = f"language model ({MODEL})" if model_enabled() else "regex fallback (ANTHROPIC_API_KEY not set)"
     print("Dental insurance verification agent (synthetic data, mocked APIs)")
     print(f"Portal parser: {mode}\n")
 

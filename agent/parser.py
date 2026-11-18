@@ -1,8 +1,8 @@
 """Turn messy portal text into standard benefits fields, each with a confidence.
 
-If ANTHROPIC_API_KEY is set, Claude Haiku extracts the fields with a JSON
-schema (structured outputs). Otherwise, or if the API call fails, a regex
-parser is used. Note: LLM confidence is self-reported and not calibrated.
+If ANTHROPIC_API_KEY is set, a hosted language model extracts the fields
+against a JSON schema. Otherwise, or if that call fails, the regex parser is
+used. Model confidence is self-reported and not calibrated.
 """
 import json
 import os
@@ -98,7 +98,7 @@ or incomplete (for example a partial date or a question mark).
 </portal_text>"""
 
 
-def parse_llm(text: str, client=None) -> dict[str, FieldValue]:
+def parse_with_model(text: str, client=None) -> dict[str, FieldValue]:
     if client is None:
         import anthropic
         client = anthropic.Anthropic()
@@ -108,27 +108,27 @@ def parse_llm(text: str, client=None) -> dict[str, FieldValue]:
         messages=[{"role": "user", "content": PROMPT.format(text=text)}],
     )
     if response.stop_reason != "end_turn":
-        raise RuntimeError(f"LLM stopped early: {response.stop_reason}")
+        raise RuntimeError(f"Model stopped early: {response.stop_reason}")
     data = json.loads(next(b.text for b in response.content if b.type == "text"))
     out = {}
     for skey, item in data.items():
         if item["found"]:
             conf = min(max(float(item["confidence"]), 0.0), 1.0)
             out[skey.replace("__", ".")] = FieldValue(
-                value=item["value"], confidence=conf, source=f"portal:llm:{MODEL}")
+                value=item["value"], confidence=conf, source=f"portal:model:{MODEL}")
     return out
 
 
-def llm_enabled() -> bool:
+def model_enabled() -> bool:
     return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
-def parse_portal_text(text: str, use_llm: bool | None = None) -> dict[str, FieldValue]:
-    if use_llm is None:
-        use_llm = llm_enabled()
-    if use_llm:
+def parse_portal_text(text: str, use_model: bool | None = None) -> dict[str, FieldValue]:
+    if use_model is None:
+        use_model = model_enabled()
+    if use_model:
         try:
-            return parse_llm(text)
-        except Exception as exc:  # demo choice: never block the nightly run on the LLM
-            print(f"  [parser] LLM call failed ({type(exc).__name__}); using regex fallback")
+            return parse_with_model(text)
+        except Exception as exc:  # never block the nightly run on the model call
+            print(f"  [parser] model call failed ({type(exc).__name__}); using regex fallback")
     return parse_regex(text)

@@ -1,14 +1,16 @@
-# Dental Insurance Verification Agent (prototype)
+# Dental insurance verification agent
+
+A small prototype I built to work through how insurance verification could be automated for a dental office.
 
 ## What it does
 
-Every night, the agent reads the next few days of appointments and checks the dental coverage of each patient through a mock clearinghouse (a stand-in for an X12 270/271 eligibility check).
-When the eligibility response is missing fields that drive the price, such as frequency limits or service history, it reads a mock payer portal page and parses the messy text into standard fields, each with a confidence score.
-It then estimates what the patient will owe, routes each appointment to VERIFIED or NEEDS_REVIEW with a stated reason, and later scores its own estimates against paid claims (EOBs) by payer and field.
+Each night it reads the appointments for the next few days and checks coverage for each patient through a mock clearinghouse (standing in for an X12 270/271 eligibility check).
+If that response is missing something that affects the price, like frequency limits or service history, it reads a mock payer portal page and parses the messy text into standard fields with a confidence score on each one.
+It then estimates what the patient will owe, marks each appointment VERIFIED or NEEDS_REVIEW with a reason, and once claims are paid, compares the estimates against the EOBs by payer and field.
 
 ## How to run
 
-Requires Python 3.11 or later.
+Python 3.11 or later.
 
 ```bash
 pip install -r requirements.txt
@@ -18,11 +20,13 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Run the tests with `python -m pytest`. To try the optional LLM parsing step, set `ANTHROPIC_API_KEY` before `python run.py`; without it, the agent uses a regex parser.
+Tests: `python -m pytest` (16 tests).
+
+The portal text is parsed with regular expressions by default. There is also an optional parser that sends the text to a hosted language model with a JSON schema; it is used only when `ANTHROPIC_API_KEY` is set.
 
 ## Sample output
 
-From a real run of `python run.py` (no API key set, so the regex parser was used):
+Output from an actual run, with the default regex parser:
 
 ```
 Dental insurance verification agent (synthetic data, mocked APIs)
@@ -51,57 +55,56 @@ Field accuracy vs EOB key: 56/60 (93.3%)   Auto-verified line accuracy: 13/14 (9
 Wrote outputs/review_queue.csv and outputs/accuracy_report.md
 ```
 
-The run also writes `outputs/review_queue.csv` (the 7 AM front desk queue, with reasons) and `outputs/accuracy_report.md`.
+It also writes `outputs/review_queue.csv` (what the front desk would work through at 7 AM) and `outputs/accuracy_report.md`.
 
 ## Results
 
-| Metric | Result |
-|---|---|
-| Auto-verified | 7 of 10 appointments (70%) |
-| Sent to review | 3 of 10 appointments (30%) |
-| Field accuracy vs. EOB key | 56 of 60 fields (93.3%) |
-| Line accuracy, all lines | 18 of 20 procedure lines (90.0%) |
-| Line accuracy, auto-verified lines only | 13 of 14 procedure lines (92.9%) |
+- Auto-verified: 7 of 10 appointments (70%)
+- Sent to review: 3 of 10 (30%)
+- Field accuracy against the EOB answer key: 56 of 60 fields (93.3%)
+- Line accuracy, all 20 procedure lines: 18 of 20 (90%)
+- Line accuracy on auto-verified lines only: 13 of 14 (92.9%)
 
-Fields compared per procedure line: covered, insurance paid, patient paid ($0.50 tolerance).
+For each procedure line I compare three fields: covered, insurance paid and patient paid, with a $0.50 tolerance.
 
-What the mismatches show:
+Two estimates were wrong, both for Dunmore Benefits:
 
-- **P009 (sent to review, correctly).** The 271 said the deductible was met; the portal said $50 remained. The agent flagged the conflict instead of guessing. The EOB shows the portal was right. A human would have caught this before the visit.
-- **P008 (auto-verified, wrong).** The payer paid the posterior composite filling at the cheaper amalgam rate (an alternate benefit downgrade). The agent does not model downgrades, so it overestimated what insurance would pay by $42. This is the kind of error the feedback loop exists for: the accuracy report puts Dunmore Benefits at the top of the list to fix.
+P009 was sent to review because the 271 said the deductible was met while the portal said $50 was left. The EOB shows the portal was right, so the review step did its job here.
 
-These numbers are not a performance claim. The 10 patients were written by hand so that each path (complete 271, portal fallback, inactive plan, frequency limit, annual maximum, waiting period, low confidence, source conflict) is exercised at least once, and the EOB answer key was written by the same person. The numbers show that the routing and scoring work end to end, not how the agent would perform on real claims.
+P008 was auto-verified but wrong by $42. The payer paid the composite filling at the amalgam rate (an alternate benefit downgrade), which I do not model. This is the case the feedback loop is for: the accuracy report puts Dunmore at the top of the list of payers to look at.
+
+I want to be clear about what these numbers mean. I wrote the 10 patients myself so that every path gets exercised at least once (complete 271, portal fallback, inactive plan, frequency limit, annual max, waiting period, low confidence, conflicting sources), and I also wrote the EOB answer key. So the numbers show the routing and scoring work end to end. They do not say anything about accuracy on real claims.
 
 ## How it works
 
 ```
 data/appointments.csv
-   -> agent/clearinghouse.py   mock 270/271 (two payers omit frequency limits and history)
-   -> missing cost-driving fields?
-        yes -> agent/portal.py (mock portal text) -> agent/parser.py (Claude Haiku or regex)
-   -> agent/estimate.py        fee, deductible, coverage %, annual max, frequency, waiting period
-   -> agent/pipeline.py        VERIFIED, or NEEDS_REVIEW with a reason
-   -> agent/eob_check.py       compare with data/eobs.csv, mismatches by payer and field
+  -> agent/clearinghouse.py   mock 270/271 (two payers leave out frequency limits and history)
+  -> missing fields that affect cost?
+       yes -> agent/portal.py (mock portal text) -> agent/parser.py
+  -> agent/estimate.py        fee, deductible, coverage %, annual max, frequency, waiting period
+  -> agent/pipeline.py        VERIFIED, or NEEDS_REVIEW with a reason
+  -> agent/eob_check.py       compare with data/eobs.csv, mismatches by payer and field
 ```
 
-Routing rule: NEEDS_REVIEW if the plan is inactive, if any cost-driving field is missing or has confidence below 0.9, or if the clearinghouse and the portal disagree on a field. Cost-driving fields depend on the procedures booked (for example, a crown needs the major coverage percentage and the waiting period; a cleaning needs the prophy frequency limit and history).
+An appointment goes to review if the plan is inactive, if any field that affects the cost is missing or has confidence below 0.9, or if the clearinghouse and the portal disagree. Which fields matter depends on what is booked. A crown needs the major coverage percentage and the waiting period; a cleaning needs the prophy frequency limit and history.
 
-Confidence: clearinghouse fields get 0.99. Regex fields get 0.95, or 0.6 when the source line contains hedging such as a question mark or the word "verify". With the LLM parser, confidence is reported by the model itself through a JSON schema; it is not calibrated and should not be trusted as a probability without measuring it.
+Confidence values: 0.99 for clearinghouse fields, 0.95 for portal fields the regex parser reads cleanly, and 0.6 when the line is hedged (a question mark, "verify", and so on). With the model-based parser the confidence comes from the model itself, which is not calibrated, so I would not treat it as a probability without measuring it first.
 
 ## Limitations
 
-- **Synthetic data only.** All patients, members, payers, fees and claims are invented. No real patient data is used.
-- **Mocked APIs.** The clearinghouse, the payer portal and Open Dental are all simulated with local files. Nothing connects to a real clearinghouse, payer, browser agent or phone line.
-- **Not tested on real payers.** Real 271 responses and portal pages are far messier and vary by payer. The regex parser was written for the four synthetic portal pages and would not generalize.
-- **No HIPAA infrastructure.** There is no encryption, access control, audit logging, BAA coverage or PHI handling of any kind. Do not use this with real patient information.
-- **LLM path not exercised in the sample run.** The Claude Haiku parsing step is covered by a unit test with a fake client, but the results above come from the regex parser.
-- **Simplified benefit rules.** Office fee is treated as the allowed amount; benefit year is the calendar year; no alternate benefit downgrades, coordination of benefits, age limits, missing tooth clauses or in-network fee schedules.
+- Synthetic data only. Every patient, member ID, payer, fee and claim is made up. There is no real patient data in this repo.
+- Mocked APIs. The clearinghouse, the payer portal and Open Dental are all simulated with local files. Nothing talks to a real clearinghouse, payer, browser or phone line.
+- Not tested on real payers. Real 271 responses and portal pages are much messier and differ by payer. The regex parser was written against four sample pages and would not generalize.
+- No HIPAA infrastructure. No encryption, access control, audit logging, BAA or PHI handling of any kind. Do not run this with real patient information.
+- The model-based parser was not used for the sample run. It is covered by one unit test with a fake client; the numbers above come from the regex parser.
+- Benefit rules are simplified: the office fee is treated as the allowed amount, the benefit year is the calendar year, and there are no downgrades, coordination of benefits, age limits, missing tooth clauses or in-network fee schedules.
 
-## Project layout
+## Layout
 
 ```
-data/        appointments.csv, fee_schedule.csv, eobs.csv, clearinghouse_271.json, portal_pages.json
-agent/       models, data loaders, clearinghouse, portal, parser, estimate, pipeline, eob_check
-tests/       16 pytest tests
-run.py       one command demo
+data/      appointments, fee schedule, EOB answer key, mock 271 responses, mock portal pages
+agent/     models, loaders, clearinghouse, portal, parser, estimate, pipeline, eob_check
+tests/     pytest tests
+run.py     runs everything
 ```

@@ -49,7 +49,7 @@ def test_regex_parser_handles_messy_text():
     assert all(fv.confidence == parser.HIGH for fv in out.values())
 
 
-def test_llm_path_maps_schema_output(monkeypatch):
+def test_model_path_maps_schema_output(monkeypatch):
     """No network: a fake client returns what the structured-output call would."""
     payload = {k.replace(".", "__"): {"found": False, "value": 0, "confidence": 0}
                for k in parser.FIELD_TYPES}
@@ -57,14 +57,14 @@ def test_llm_path_maps_schema_output(monkeypatch):
     fake_resp = SimpleNamespace(stop_reason="end_turn",
                                 content=[SimpleNamespace(type="text", text=json.dumps(payload))])
     fake_client = SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake_resp))
-    out = parser.parse_llm("Basic 80%", client=fake_client)
+    out = parser.parse_with_model("Basic 80%", client=fake_client)
     assert list(out) == ["coverage.basic"]
     assert out["coverage.basic"].value == 80
-    assert out["coverage.basic"].source.startswith("portal:llm")
+    assert out["coverage.basic"].source.startswith("portal:model")
 
 
 def test_eob_mismatch_logged():
-    report = compare(run_all(use_llm=False), load_eobs())
+    report = compare(run_all(use_model=False), load_eobs())
     p008 = [m for m in report.mismatches if m.patient_id == "P008"]
     assert {m.field for m in p008} == {"insurance_paid", "patient_paid"}
     assert p008[0].payer == "Dunmore Benefits"
