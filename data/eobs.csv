@@ -1,0 +1,21 @@
+patient_id,payer,line,cdt_code,covered,insurance_paid,patient_paid
+P001,Acme Dental PPO,1,D0120,true,65.00,0.00
+P001,Acme Dental PPO,2,D1110,true,110.00,0.00
+P001,Acme Dental PPO,3,D0274,true,75.00,0.00
+P002,Acme Dental PPO,1,D2740,true,575.00,625.00
+P003,Bluebird Dental,1,D0120,false,0.00,65.00
+P003,Bluebird Dental,2,D1110,false,0.00,110.00
+P004,Bluebird Dental,1,D4341,true,200.00,50.00
+P004,Bluebird Dental,2,D4341,true,0.00,250.00
+P005,Bluebird Dental,1,D0120,false,0.00,65.00
+P005,Bluebird Dental,2,D1110,false,0.00,110.00
+P006,Cedar Mutual Dental,1,D0120,true,65.00,0.00
+P006,Cedar Mutual Dental,2,D1110,true,110.00,0.00
+P006,Cedar Mutual Dental,3,D1206,true,45.00,0.00
+P007,Cedar Mutual Dental,1,D0120,true,65.00,0.00
+P007,Cedar Mutual Dental,2,D1110,true,110.00,0.00
+P008,Dunmore Benefits,1,D0120,true,65.00,0.00
+P008,Dunmore Benefits,2,D2391,true,49.00,131.00
+P009,Dunmore Benefits,1,D0120,true,65.00,0.00
+P009,Dunmore Benefits,2,D2391,true,91.00,89.00
+P010,Acme Dental PPO,1,D2740,false,0.00,1200.00

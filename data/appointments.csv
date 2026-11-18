@@ -1,0 +1,11 @@
+patient_id,name,dob,payer,member_id,appt_date,cdt_codes
+P001,Avery Testcase,1985-04-12,Acme Dental PPO,ACM-10001,2026-11-19,D0120;D1110;D0274
+P002,Jordan Sample,1990-08-30,Acme Dental PPO,ACM-10002,2026-11-19,D2740
+P003,Riley Placeholder,1978-01-05,Bluebird Dental,BLB-20003,2026-11-19,D0120;D1110
+P004,Casey Fictional,1969-11-22,Bluebird Dental,BLB-20004,2026-11-20,D4341;D4341
+P005,Morgan Synthetic,2001-06-15,Bluebird Dental,BLB-20005,2026-11-20,D0120;D1110
+P006,Taylor Mockperson,1995-03-03,Cedar Mutual Dental,CDR-30006,2026-11-20,D0120;D1110;D1206
+P007,Quinn Example,1988-12-09,Cedar Mutual Dental,CDR-30007,2026-11-21,D0120;D1110
+P008,Drew Demo,1974-07-27,Dunmore Benefits,DUN-40008,2026-11-21,D0120;D2391
+P009,Skyler Dummy,1999-09-19,Dunmore Benefits,DUN-40009,2026-11-21,D0120;D2391
+P010,Parker Notreal,1982-02-14,Acme Dental PPO,ACM-10010,2026-11-21,D2740

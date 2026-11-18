@@ -1,0 +1,9 @@
+cdt_code,description,category,fee,frequency_group
+D0120,Periodic oral evaluation,preventive,65.00,exam
+D0274,Bitewings - four radiographic images,preventive,75.00,bwx
+D0330,Panoramic radiographic image,preventive,130.00,
+D1110,Prophylaxis - adult,preventive,110.00,prophy
+D1206,Topical application of fluoride varnish,preventive,45.00,fluoride
+D2391,Resin-based composite - one surface posterior,basic,180.00,
+D2740,Crown - porcelain/ceramic,major,1200.00,
+D4341,Periodontal scaling and root planing - per quadrant,basic,250.00,

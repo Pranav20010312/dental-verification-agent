@@ -1,0 +1,4 @@
+patient_id,name,payer,member_id,appt_date,cdt_codes,est_patient_cost,reason
+P003,Riley Placeholder,Bluebird Dental,BLB-20003,2026-11-19,D0120;D1110,175.00,plan inactive per 271
+P007,Quinn Example,Cedar Mutual Dental,CDR-30007,2026-11-21,D0120;D1110,0.00,low confidence on freq.prophy (0.60); low confidence on hist.prophy (0.60)
+P009,Skyler Dummy,Dunmore Benefits,DUN-40009,2026-11-21,D0120;D2391,54.00,"source conflict on deductible_remaining: 271=0, portal=50.0"
